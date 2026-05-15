@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroupChat</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">💬</div>
+    <h1>GroupChat</h1>
+    <p>Nhắn tin & gọi điện nhóm realtime</p>
+    <div class="form-group">
+      <label>Tên của bạn</label>
+      <input id="inp-name" type="text" placeholder="Nhập tên..." maxlength="24" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Chọn avatar</label>
+      <div class="avatar-row" id="avatar-row"></div>
+    </div>
+    <div class="form-group">
+      <label>Màu đại diện</label>
+      <div class="color-row" id="color-row"></div>
+    </div>
+    <button id="btn-login" class="btn-primary">Tham gia →</button>
+    <p class="login-hint" id="login-error"></p>
+  </div>
+</div>
+
+<!-- ══ APP ════════════════════════════════════ -->
+<div id="app-screen" style="display:none">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <span class="brand">💬 GroupChat</span>
+      <button class="icon-btn" id="close-sidebar"><i class="ti ti-x"></i></button>
+    </div>
+
+    <div class="me-card" id="me-card">
+      <div class="me-ava" id="me-ava"></div>
+      <div>
+        <div class="me-name" id="me-name"></div>
+        <div class="me-online">🟢 Đang hoạt động</div>
+      </div>
+    </div>
+
+    <div class="sb-search">
+      <i class="ti ti-search"></i>
+      <input type="text" id="search-inp" placeholder="Tìm kiếm...">
+    </div>
+
+    <div class="sb-label">KÊNH NHÓM</div>
+    <div id="groups-list"></div>
+
+    <div class="sb-label" style="margin-top:10px">THÀNH VIÊN ONLINE <span id="online-count">(0)</span></div>
+    <div id="users-list"></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-area">
+    <header class="chat-header">
+      <button class="icon-btn show-sidebar-btn" id="open-sidebar"><i class="ti ti-menu-2"></i></button>
+      <div class="ch-ava" id="ch-ava"></div>
+      <div class="ch-info">
+        <div class="ch-name" id="ch-name">Chọn kênh để bắt đầu</div>
+        <div class="ch-sub"  id="ch-sub"></div>
+      </div>
+      <div class="ch-actions">
+        <button class="icon-btn call-btn" id="btn-voice" title="Gọi thoại"><i class="ti ti-phone"></i></button>
+        <button class="icon-btn call-btn blue" id="btn-video" title="Gọi video"><i class="ti ti-video"></i></button>
+      </div>
+    </header>
+
+    <div class="msgs" id="msgs-wrap">
+      <div class="empty-hint">Chọn kênh hoặc thành viên để bắt đầu 💬</div>
+    </div>
+
+    <div class="input-bar" id="input-bar" style="display:none">
+      <!-- Emoji picker -->
+      <div class="emoji-box" id="emoji-box"></div>
+
+      <!-- Reply strip -->
+      <div class="reply-strip" id="reply-strip" style="display:none">
+        <div>
+          <strong id="reply-who"></strong>
+          <span id="reply-preview"></span>
+        </div>
+        <button onclick="cancelReply()"><i class="ti ti-x"></i></button>
+      </div>
+
+      <!-- Typing -->
+      <div class="typing-bar" id="typing-bar" style="display:none">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <span id="typing-who"></span>
+      </div>
+
+      <div class="input-row">
+        <button class="tool-btn" id="btn-emoji" title="Emoji"><i class="ti ti-mood-smile"></i></button>
+        <button class="tool-btn" id="btn-img"   title="Gửi ảnh"><i class="ti ti-photo"></i></button>
+        <textarea id="msg-inp" rows="1" placeholder="Nhắn tin..."></textarea>
+        <button class="send-btn" id="btn-send"><i class="ti ti-send"></i></button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══ CALL MODAL ═════════════════════════════ -->
+<div class="modal-overlay" id="call-modal">
+  <div class="call-box">
+    <div class="call-type" id="call-type-label">📞 Gọi thoại</div>
+    <div class="call-ava"  id="call-ava"></div>
+    <div class="call-name" id="call-name"></div>
+    <div class="call-status" id="call-status">Đang kết nối...</div>
+
+    <!-- video -->
+    <div id="video-wrap" style="display:none;position:relative;margin-top:12px">
+      <video id="remote-video" autoplay playsinline style="width:100%;border-radius:14px;background:#000;min-height:160px;display:block"></video>
+      <video id="local-video"  autoplay muted playsinline style="position:absolute;bottom:8px;right:8px;width:100px;border-radius:10px;background:#111"></video>
+    </div>
+
+    <div class="call-controls">
+      <div class="ctrl-item">
+        <button id="ctrl-mute"  class="ctrl-btn" title="Tắt mic"><i class="ti ti-microphone"></i></button>
+        <span>Mic</span>
+      </div>
+      <div class="ctrl-item" id="ctrl-cam-wrap" style="display:none">
+        <button id="ctrl-cam" class="ctrl-btn" title="Camera"><i class="ti ti-camera"></i></button>
+        <span>Camera</span>
+      </div>
+      <div class="ctrl-item">
+        <button id="ctrl-end" class="ctrl-btn danger" title="Kết thúc" onclick="endCall()"><i class="ti ti-phone-off"></i></button>
+        <span>Kết thúc</span>
+      </div>
+      <div class="ctrl-item">
+        <button id="ctrl-spk" class="ctrl-btn" title="Loa"><i class="ti ti-volume"></i></button>
+        <span>Loa</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INCOMING CALL ══════════════════════════ -->
+<div class="incoming-call" id="incoming-call" style="display:none">
+  <div class="ic-ava"  id="ic-ava"></div>
+  <div class="ic-info">
+    <div id="ic-name"></div>
+    <div id="ic-type" style="font-size:12px;color:rgba(255,255,255,.5)"></div>
+  </div>
+  <button class="ic-btn reject" id="ic-reject"><i class="ti ti-phone-off"></i></button>
+  <button class="ic-btn accept" id="ic-accept"><i class="ti ti-phone"></i></button>
+</div>
+
+<!-- ══ TOAST ══════════════════════════════════ -->
+<div class="toast" id="toast">
+  <span id="toast-ico"></span>
+  <div>
+    <strong id="toast-title"></strong>
+    <div id="toast-body"></div>
+  </div>
+</div>
+
+<!-- hidden file input -->
+<input type="file" id="file-inp" accept="image/*" style="display:none">
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
