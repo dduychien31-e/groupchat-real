@@ -28,7 +28,43 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Socket.io ───────────────────────────────────────
 io.on('connection', socket => {
+// Voice message trong group
+socket.on("group:voice", ({ gid, audioUrl }) => {
+  const user = users[socket.id];
+  if (!user || !audioUrl) return;
 
+  const msg = {
+    sender: user,
+    audioUrl,
+    ts: Date.now()
+  };
+
+  io.to(gid).emit("group:msg", { gid, msg });
+});
+
+// Voice message chat riêng
+socket.on("dm:voice", ({ toId, audioUrl }) => {
+  const user = users[socket.id];
+  if (!user || !audioUrl) return;
+
+  const msg = {
+    sender: user,
+    audioUrl,
+    ts: Date.now()
+  };
+
+  socket.emit("dm:msg", {
+    fromId: socket.id,
+    toId,
+    msg
+  });
+
+  io.to(toId).emit("dm:msg", {
+    fromId: socket.id,
+    toId,
+    msg
+  });
+});
   // 1️⃣  ĐĂNG NHẬP
   socket.on('login', ({ name, avatar, color }) => {
     const user = {

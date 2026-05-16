@@ -323,7 +323,14 @@ function appendMsg(msg) {
   while (div.firstChild) wrap.appendChild(div.firstChild);
   wrap.scrollTop = wrap.scrollHeight;
 }
-
+if (msg.audioUrl) {
+  return `
+    <div class="message">
+      <div><strong>${msg.sender?.name || msg.sender || "User"}</strong></div>
+      <audio controls src="${msg.audioUrl}"></audio>
+    </div>
+  `;
+}
 function buildMsgHTML(msg, prev) {
   if (msg.sys) {
     return `<div class="msg-row"><div style="width:100%;text-align:center"><div class="bubble sys">${esc(msg.text)}</div></div></div>`;
@@ -711,3 +718,63 @@ window.endCall     = endCall;
 window.acceptCall  = acceptCall;
 window.rejectCall  = rejectCall;
 window.startCall   = startCall;
+
+// ================= VOICE MESSAGE =================
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+
+const btnVoiceMsg = document.getElementById("btn-voice-msg");
+
+btnVoiceMsg?.addEventListener("click", async () => {
+  if (!currentRoom) {
+    alert("Hãy chọn cuộc trò chuyện trước.");
+    return;
+  }
+
+  if (!isRecording) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true
+    });
+
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const audioUrl = reader.result;
+
+        if (currentRoom.type === "group") {
+          socket.emit("group:voice", {
+            gid: currentRoom.id,
+            audioUrl
+          });
+        } else {
+          socket.emit("dm:voice", {
+            toId: currentRoom.id,
+            audioUrl
+          });
+        }
+      };
+
+      reader.readAsDataURL(blob);
+
+      stream.getTracks().forEach(track => track.stop());
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    btnVoiceMsg.textContent = "⏹️";
+  } else {
+    mediaRecorder.stop();
+    isRecording = false;
+    btnVoiceMsg.textContent = "🎤";
+  }
+});
